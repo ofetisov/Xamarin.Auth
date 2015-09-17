@@ -39,6 +39,8 @@ namespace Xamarin.Auth
 		Uri accessTokenUrl;
 		GetUsernameAsyncFunc getUsernameAsync;
 
+		protected IDictionary<string, string> additionalInitParams = new Dictionary<string, string>;
+
 		string requestState;
 		bool reportedForgery = false;
 
@@ -85,6 +87,20 @@ namespace Xamarin.Auth
 		public Uri AccessTokenUrl
 		{
 			get { return this.accessTokenUrl; }
+		}
+
+		/// <summary>
+		/// Adds additional url parameter to initial Auth request.
+		/// </summary>
+		// <param name='name'>
+        /// Parameter name.
+        /// </param>
+        /// <param name='value'>
+        /// Parameter value.
+        /// </param>
+		public void AddAdditionalInitParameter (string name, string value)
+		{
+			additionalInitParams.Add(name, value);
 		}
 
 		/// <summary>
@@ -209,15 +225,21 @@ namespace Xamarin.Auth
 		/// </returns>
 		public override Task<Uri> GetInitialUrlAsync ()
 		{
-			var url = new Uri (string.Format (
+			string baseUrl = string.Format (
 				"{0}?client_id={1}&redirect_uri={2}&response_type={3}&scope={4}&state={5}",
 				authorizeUrl.AbsoluteUri,
 				Uri.EscapeDataString (clientId),
 				Uri.EscapeDataString (RedirectUrl.AbsoluteUri),
 				IsImplicit ? "token" : "code",
 				Uri.EscapeDataString (scope),
-				Uri.EscapeDataString (requestState)));
+				Uri.EscapeDataString (requestState));
 
+			foreach (KeyValuePair<string, string> singleParameter in additionalInitParams)
+			{
+				baseUrl += string.Format ("&{0}={1}", singleParameter.Key, singleParameter.Value);
+			}
+
+			var url = new Uri (baseUrl);
 			var tcs = new TaskCompletionSource<Uri> ();
 			tcs.SetResult (url);
 			return tcs.Task;
