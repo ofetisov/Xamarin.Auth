@@ -39,7 +39,8 @@ namespace Xamarin.Auth
 		Uri accessTokenUrl;
 		GetUsernameAsyncFunc getUsernameAsync;
 
-		protected IDictionary<string, string> additionalInitParams = new Dictionary<string, string>;
+		protected IDictionary<string, string> additionalInitParams = new Dictionary<string, string> ();
+		protected bool codeQueried = false;
 
 		string requestState;
 		bool reportedForgery = false;
@@ -302,12 +303,16 @@ namespace Xamarin.Auth
 				// We found an access_token
 				//
 				OnRetrievedAccountProperties (fragment);
-			} else if (!IsImplicit) {
+			} else if (!IsImplicit && codeQueried) {
+			    // Additional redirect could be done after receiving access_token from code
+				return;
+			} else if (!IsImplicit && !codeQueried) {
 				//
 				// Look for the code
 				//
 				if (query.ContainsKey ("code")) {
 					var code = query ["code"];
+					codeQueried = true;
 					RequestAccessTokenAsync (code).ContinueWith (task => {
 						if (task.IsFaulted) {
 							OnError (task.Exception);
